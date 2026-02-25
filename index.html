@@ -7339,6 +7339,7 @@
         // ==================== CASCADING USER LOGIN FIELD ====================
         // This creates a field that lets you upload users from Excel
         // Each user has username, password, name, and any hierarchy columns
+        // NO cross-validation included - completely separate
         
         function initCascadingUserField() {
             console.log('🚀 Initializing Cascading User Login Field...');
@@ -7372,7 +7373,7 @@
         
             // ==================== EXCEL TEMPLATE FUNCTIONS ====================
             
-            // Download template - THIS IS WHAT YOU NEED
+            // Download template
             window.downloadUserTemplate = function() {
                 // Create headers
                 const headers = ['username', 'password', 'name', ...userData.hierarchyColumns];
@@ -7389,30 +7390,7 @@
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.aoa_to_sheet(sampleData);
                 
-                // Add instructions sheet
-                const instructions = [
-                    ['INSTRUCTIONS FOR CASCADING USER LOGIN'],
-                    [''],
-                    ['1. Fill in the "Users" sheet with your data'],
-                    ['2. REQUIRED columns: username, password, name'],
-                    ['3. Hierarchy columns can be ANY names (region, district, facility, etc.)'],
-                    ['4. Each row = one user with their full hierarchy path'],
-                    ['5. Save the file and upload using the "Upload Users" button'],
-                    [''],
-                    ['EXAMPLE:'],
-                    ['username, password, name, region, district, facility'],
-                    ['john, 123, John, Eastern, Kailahun, Kailahun Hospital'],
-                    ['mary, 456, Mary, Western, Urban, Connaught'],
-                    [''],
-                    ['The system will automatically detect your hierarchy columns']
-                ];
-                
-                const wsInstructions = XLSX.utils.aoa_to_sheet(instructions);
-                
                 XLSX.utils.book_append_sheet(wb, ws, 'Users');
-                XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
-                
-                // Download
                 XLSX.writeFile(wb, 'cascading_users_template.xlsx');
                 
                 if (typeof notify === 'function') {
@@ -7422,7 +7400,7 @@
                 }
             };
         
-            // Upload users from Excel - THIS IS WHAT YOU NEED
+            // Upload users from Excel
             window.uploadUserExcel = function(input, fieldId) {
                 const file = input.files[0];
                 if (!file) return;
@@ -7531,19 +7509,28 @@
                             <div style="font-size:11px; color:#666;">
                                 Hierarchy: ${userData.hierarchyColumns.join(' → ')}
                             </div>
+                            ${userData.users.length > 0 ? `
+                                <div style="margin-top:10px; font-size:11px; color:#28a745;">
+                                    ✓ Ready to use
+                                </div>
+                            ` : `
+                                <div style="margin-top:10px; font-size:11px; color:#dc3545;">
+                                    ⚠ No users loaded. Upload Excel file below.
+                                </div>
+                            `}
                         </div>
                         
-                        <div style="display:grid; gap:10px; margin-bottom:15px;">
+                        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
                             <!-- Download Template Button -->
-                            <button class="logic-add-btn" onclick="downloadUserTemplate()" style="background:#17a2b8; width:100%;">
-                                <span data-icon="download" data-size="10"></span> Download Excel Template
+                            <button class="logic-add-btn" onclick="downloadUserTemplate()" style="background:#17a2b8; width:100%; padding:12px;">
+                                <span data-icon="download" data-size="12"></span> Download Excel Template
                             </button>
                             
                             <!-- Upload Users Button -->
-                            <div>
+                            <div style="width:100%;">
                                 <input type="file" id="userUpload_${field.id}" accept=".xlsx,.xls" style="display:none;" onchange="uploadUserExcel(this, '${field.id}')">
-                                <button class="logic-add-btn" onclick="document.getElementById('userUpload_${field.id}').click()" style="background:#28a745; width:100%;">
-                                    <span data-icon="upload" data-size="10"></span> Upload Users Excel
+                                <button class="logic-add-btn" onclick="document.getElementById('userUpload_${field.id}').click()" style="background:#28a745; width:100%; padding:12px;">
+                                    <span data-icon="upload" data-size="12"></span> Upload Users Excel
                                 </button>
                             </div>
                         </div>
@@ -7564,12 +7551,15 @@
                     </div>
                 `;
                 
-                // Add to properties panel
+                // Create a temporary div and append to container
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = html;
                 container.appendChild(tempDiv.firstChild);
                 
-                if (typeof initIcons === 'function') initIcons();
+                // Initialize icons in the new content
+                if (typeof initIcons === 'function') {
+                    initIcons();
+                }
             };
         
             // ==================== RENDER IN FORM ====================
@@ -7613,6 +7603,13 @@
                 }
                 
                 // Show login form
+                const userOptions = userData.users.length > 0 ? 
+                    userData.users.map(u => {
+                        const lastLevel = userData.hierarchyColumns[userData.hierarchyColumns.length - 1];
+                        return `<option value="${u.username}">${u.name} (${u.hierarchy[lastLevel] || ''})</option>`;
+                    }).join('') 
+                    : '<option value="">-- No users loaded --</option>';
+                
                 return `
                     <div class="viewer-field" data-field-name="${field.name}">
                         <label class="viewer-field-label">${field.label}</label>
@@ -7621,10 +7618,7 @@
                             <div style="margin-bottom:10px;">
                                 <select id="userSelect_${field.id}" style="width:100%; padding:12px; border:2px solid #ddd; border-radius:6px; margin-bottom:10px; font-family:'Oswald';">
                                     <option value="">-- Select User --</option>
-                                    ${userData.users.map(u => {
-                                        const lastLevel = userData.hierarchyColumns[userData.hierarchyColumns.length - 1];
-                                        return `<option value="${u.username}">${u.name} (${u.hierarchy[lastLevel] || ''})</option>`;
-                                    }).join('')}
+                                    ${userOptions}
                                 </select>
                                 
                                 <input type="password" id="userPass_${field.id}" placeholder="Enter Password" 
@@ -7648,6 +7642,11 @@
                 const select = document.getElementById(`userSelect_${fieldId}`);
                 const pass = document.getElementById(`userPass_${fieldId}`);
                 const msg = document.getElementById(`loginMsg_${fieldId}`);
+                
+                if (!select || !pass) {
+                    console.error('Login elements not found');
+                    return;
+                }
                 
                 const username = select.value;
                 const password = pass.value;
@@ -7706,9 +7705,7 @@
                 }, 100);
             }
         }, 500);
-
-
-        
+       
         // ==================== CROSS-FIELD VALIDATION ENGINE ====================
         // One function to handle all cross-field validation (age > height, etc.)
         
