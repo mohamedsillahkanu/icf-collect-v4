@@ -3,142 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ICF Collect | DHIS2 & Google Sheets Integration</title>
-    <meta name="theme-color" content="#004080">
-    <link rel="apple-touch-icon" href="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg">
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
+    <title>ICF Collect - Data Collection Platform</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Auth Container -->
-    <div class="auth-container" id="authContainer">
-        <div class="auth-box">
-            <div class="auth-header">
-                <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg" alt="ICF-SL">
+    <!-- ==================== LOGIN PAGE ==================== -->
+    <div class="login-container" id="loginPage">
+        <div class="login-box">
+            <div class="login-header">
+                <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg" alt="ICF-SL Logo">
                 <h1>ICF Collect</h1>
                 <p>DHIS2 & Google Sheets Integration</p>
             </div>
-            <div class="auth-body">
-                <div class="auth-tabs">
-                    <div class="auth-tab active" data-tab="login">Login</div>
-                    <div class="auth-tab" data-tab="signup">Sign Up</div>
-                </div>
-                <div class="auth-error" id="authError"></div>
-                <div class="auth-success" id="authSuccess"></div>
-                <div class="auth-loading" id="authLoading" style="display:none;">
-                    <span class="spinner"></span> Please wait...
-                </div>
-                
-                <form class="auth-form active" id="loginForm">
-                    <div class="auth-group">
-                        <label class="auth-label">Email / Username</label>
-                        <input type="text" class="auth-input" id="loginEmail" required placeholder="your@email.com">
-                    </div>
-                    <div class="auth-group">
-                        <label class="auth-label">Password</label>
-                        <input type="password" class="auth-input" id="loginPassword" required placeholder="Enter password">
-                    </div>
-                    <button type="submit" class="auth-btn">Login</button>
-                    <div style="text-align:center;margin-top:12px;">
-                        <a href="#" onclick="showForgotPassword()">Forgot Password?</a>
-                    </div>
-                </form>
-                
-                <form class="auth-form" id="signupForm">
-                    <div class="auth-group">
-                        <label class="auth-label">Full Name</label>
-                        <input type="text" class="auth-input" id="signupName" required placeholder="John Doe">
-                    </div>
-                    <div class="auth-group">
-                        <label class="auth-label">Email / Username</label>
-                        <input type="text" class="auth-input" id="signupEmail" required placeholder="your@email.com">
-                    </div>
-                    <div class="auth-group">
-                        <label class="auth-label">Password</label>
-                        <input type="password" class="auth-input" id="signupPassword" required minlength="6" placeholder="Min 6 characters">
-                    </div>
-                    <button type="submit" class="auth-btn">Create Account</button>
-                </form>
-                
-                <form class="auth-form" id="forgotForm">
-                    <div class="auth-group">
-                        <label class="auth-label">Enter your email</label>
-                        <input type="email" class="auth-input" id="forgotEmail" required placeholder="your@email.com">
-                    </div>
-                    <button type="submit" class="auth-btn" style="background:#28a745;">Send Password</button>
-                    <div style="text-align:center;margin-top:12px;">
-                        <a href="#" onclick="switchAuthTab('login')">Back to Login</a>
-                    </div>
-                </form>
+            
+            <div class="login-tabs">
+                <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+                <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+                <button class="tab-btn" onclick="switchTab('forgot')">Forgot Password</button>
             </div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Email / Username</label>
+                    <input type="text" id="loginEmail" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Enter your password">
+                </div>
+                <button type="submit" class="btn-primary">Login</button>
+            </form>
+            
+            <!-- Signup Form -->
+            <form id="signupForm" class="auth-form" onsubmit="handleSignup(event)">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="signupName" required placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signupEmail" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signupPassword" required minlength="6" placeholder="Minimum 6 characters">
+                </div>
+                <button type="submit" class="btn-primary">Create Account</button>
+            </form>
+            
+            <!-- Forgot Password Form -->
+            <form id="forgotForm" class="auth-form" onsubmit="handleForgotPassword(event)">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="forgotEmail" required placeholder="Enter your email">
+                </div>
+                <button type="submit" class="btn-primary">Send Reset Link</button>
+                <p class="back-link" onclick="switchTab('login')">← Back to Login</p>
+            </form>
+            
+            <div id="message" class="message"></div>
+            <div id="loading" class="loading" style="display:none;">Processing...</div>
         </div>
     </div>
 
-    <!-- Header -->
-    <header class="header" style="display:none;">
-        <div class="header-brand">
-            <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg" alt="ICF-SL" class="header-logo">
-            <h1>ICF Collect</h1>
-        </div>
-        <div class="header-actions">
-            <span class="header-user" id="headerUser">User</span>
-            <button class="header-btn" onclick="logout()">Logout</button>
-        </div>
-    </header>
+    <!-- ==================== MAIN APP ==================== -->
+    <div id="app" style="display:none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg" alt="Logo">
+                <h2>ICF Collect</h2>
+            </div>
+            <div class="header-right">
+                <span id="userDisplay"></span>
+                <button onclick="logout()" class="btn-logout">Logout</button>
+            </div>
+        </header>
 
-    <!-- Main Container -->
-    <div class="main-container" id="mainContainer">
-        <!-- Sidebar - Left -->
-        <div class="sidebar">
-            <div class="sidebar-section">
-                <h3 class="sidebar-title">DHIS2 Fields</h3>
-                <div class="field-type special" data-type="period">Period (YYYYMM)</div>
-            </div>
-            <div class="sidebar-section">
-                <h3 class="sidebar-title">Basic Fields</h3>
-                <div class="field-type" data-type="text">Text Input</div>
-                <div class="field-type" data-type="number">Number</div>
-                <div class="field-type" data-type="date">Date</div>
-                <div class="field-type" data-type="email">Email</div>
-            </div>
-        </div>
+        <!-- Main Content -->
+        <div class="app-main">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>DHIS2 Fields</h3>
+                    <div class="field-item" onclick="addField('period')">📅 Period (YYYYMM)</div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Basic Fields</h3>
+                    <div class="field-item" onclick="addField('text')">📝 Text Input</div>
+                    <div class="field-item" onclick="addField('number')">🔢 Number</div>
+                    <div class="field-item" onclick="addField('email')">✉️ Email</div>
+                    <div class="field-item" onclick="addField('phone')">📞 Phone</div>
+                    <div class="field-item" onclick="addField('date')">📅 Date</div>
+                    <div class="field-item" onclick="addField('textarea')">📄 Long Text</div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Selection Fields</h3>
+                    <div class="field-item" onclick="addField('select')">▼ Dropdown</div>
+                    <div class="field-item" onclick="addField('radio')">◉ Radio</div>
+                    <div class="field-item" onclick="addField('checkbox')">☑ Checkbox</div>
+                    <div class="field-item" onclick="addField('yesno')">✓ Yes/No</div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Special Fields</h3>
+                    <div class="field-item" onclick="addField('gps')">📍 GPS Location</div>
+                    <div class="field-item" onclick="addField('signature')">✍️ Signature</div>
+                </div>
+            </aside>
 
-        <!-- Canvas - Center -->
-        <div class="canvas-container">
-            <div class="canvas-header">
-                <input type="text" class="form-title-input" id="formTitle" value="My Form" placeholder="Form Title...">
-                <span id="fieldCount">0 fields</span>
-            </div>
-            <div class="canvas">
-                <div class="form-preview">
-                    <div class="form-preview-header">
-                        <h2 id="previewTitle">My Form</h2>
-                    </div>
-                    <div class="form-preview-body">
-                        <div class="drop-zone" id="dropZone">
-                            <p>Click field types to add them</p>
-                        </div>
+            <!-- Canvas -->
+            <main class="canvas">
+                <div class="canvas-header">
+                    <input type="text" id="formTitle" class="form-title" value="Untitled Form" placeholder="Form Title">
+                    <div class="canvas-actions">
+                        <button onclick="previewForm()" class="btn-secondary">👁 Preview</button>
+                        <button onclick="saveForm()" class="btn-success">💾 Save</button>
+                        <button onclick="shareForm()" class="btn-primary">📤 Share</button>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Properties - Right -->
-        <div class="properties-panel" id="propertiesPanel">
-            <h3 class="properties-title">Field Properties</h3>
-            <div id="propertiesContent">
-                <div class="no-selection">
-                    <p>Select a field to edit</p>
+                
+                <div class="canvas-body" id="canvasBody">
+                    <div class="empty-canvas" id="emptyCanvas">
+                        <div class="empty-icon">📋</div>
+                        <h3>Start Building Your Form</h3>
+                        <p>Click on any field from the sidebar to add it here</p>
+                    </div>
+                    <div id="formFields" class="form-fields"></div>
                 </div>
-            </div>
+            </main>
+
+            <!-- Properties Panel -->
+            <aside class="properties" id="propertiesPanel">
+                <h3>Field Properties</h3>
+                <div id="propertiesContent" class="properties-content">
+                    <p class="no-selection">Select a field to edit its properties</p>
+                </div>
+            </aside>
         </div>
     </div>
 
-    <!-- Notification -->
-    <div class="notification" id="notification"></div>
-    
-    <!-- Footer -->
-    <footer class="footer">© 2025 ICF-SL | ICF Collect</footer>
+    <!-- Preview Modal -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Form Preview</h3>
+                <button onclick="closePreview()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="previewBody"></div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Share Form</h3>
+                <button onclick="closeModal('shareModal')" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Share this link to allow others to fill your form:</p>
+                <div class="share-url" id="shareUrl"></div>
+                <button onclick="copyShareUrl()" class="btn-primary">Copy Link</button>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
