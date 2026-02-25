@@ -7339,7 +7339,6 @@
         // ==================== CASCADING USER LOGIN FIELD ====================
         // This creates a field that lets you upload users from Excel
         // Each user has username, password, name, and any hierarchy columns
-        // Interface matches the cascade dropdown style
         
         function initCascadingUserField() {
             console.log('🚀 Initializing Cascading User Login Field...');
@@ -7347,13 +7346,13 @@
             // Store user data
             const userData = {
                 users: [],
-                hierarchyColumns: ['region', 'district', 'chiefdom', 'hf'], // default
+                hierarchyColumns: ['region', 'district', 'chiefdom', 'hf'],
                 currentUser: null
             };
         
             // Load saved data
             try {
-                const saved = safeStorage.getItem('cascadingUsers');
+                const saved = localStorage.getItem('cascadingUsers');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     userData.users = parsed.users || [];
@@ -7365,67 +7364,33 @@
         
             // Save data
             function saveData() {
-                safeStorage.setItem('cascadingUsers', JSON.stringify({
+                localStorage.setItem('cascadingUsers', JSON.stringify({
                     users: userData.users,
                     hierarchyColumns: userData.hierarchyColumns
                 }));
             }
         
             // ==================== EXCEL TEMPLATE FUNCTIONS ====================
-            
-            // Download template
             window.downloadUserTemplate = function() {
                 const headers = ['username', 'password', 'name', ...userData.hierarchyColumns];
                 
-                // Create sample data with headers and example rows
                 const sampleData = [
                     headers,
                     ['mohamed', 'mohamed123', 'Mohamed Sillah', 'Eastern Region', 'Kailahun District', 'Luawa Chiefdom', 'Kailahun Gov Hospital'],
                     ['fatmata', 'fatmata123', 'Fatmata Sesay', 'Western Region', 'Western Urban', 'East 1', 'Connaught Hospital'],
-                    ['john', 'john123', 'John Kamara', 'Northern Region', 'Bombali District', 'Makeni', 'Makeni Regional Hospital'],
-                    ['', '', '', '', '', '', ''] // Empty row for user to fill
+                    ['', '', '', '', '', '', '']
                 ];
                 
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.aoa_to_sheet(sampleData);
-                
-                // Add instructions as a separate sheet (like cascade dropdown)
-                const instructionsData = [
-                    ['INSTRUCTIONS FOR CASCADING USER LOGIN'],
-                    [''],
-                    ['REQUIRED COLUMNS:'],
-                    ['username | password | name'],
-                    [''],
-                    ['HIERARCHY COLUMNS (you can add any number):'],
-                    ['region, district, chiefdom, hf (or any names you want)'],
-                    [''],
-                    ['EXAMPLE:'],
-                    ['username, password, name, region, district, chiefdom, hf'],
-                    ['mohamed, 123, Mohamed, Eastern, Kailahun, Luawa, Kailahun Gov Hospital'],
-                    [''],
-                    ['NOTES:'],
-                    ['- Do not change the header row'],
-                    ['- All fields are required'],
-                    ['- Each user can only be assigned to ONE facility at the lowest level'],
-                    ['- Save the file and upload using the "Upload Users Excel" button']
-                ];
-                
-                const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
-                wsInstructions['!cols'] = [{ wch: 60 }];
-                
                 XLSX.utils.book_append_sheet(wb, ws, 'Users');
-                XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
-                
                 XLSX.writeFile(wb, 'cascading_users_template.xlsx');
                 
                 if (typeof notify === 'function') {
-                    notify('📥 Template downloaded! Fill it with your users and upload.', 'success');
-                } else {
-                    alert('Template downloaded! Fill it with your users and upload.');
+                    notify('📥 Template downloaded!', 'success');
                 }
             };
         
-            // Upload users from Excel
             window.uploadUserExcel = function(input, fieldId) {
                 const file = input.files[0];
                 if (!file) return;
@@ -7435,10 +7400,7 @@
                     try {
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
-                        
-                        // Get first sheet
-                        const sheetName = workbook.SheetNames[0];
-                        const sheet = workbook.Sheets[sheetName];
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
                         const rows = XLSX.utils.sheet_to_json(sheet);
                         
                         if (rows.length === 0) {
@@ -7446,82 +7408,61 @@
                             return;
                         }
                         
-                        // Get headers from first row
                         const headers = Object.keys(rows[0]);
-                        
-                        // Check required headers
                         const requiredHeaders = ['username', 'password', 'name'];
                         const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
                         
                         if (missingHeaders.length > 0) {
-                            alert(`Missing required headers: ${missingHeaders.join(', ')}\n\nRequired: username, password, name`);
+                            alert(`Missing: ${missingHeaders.join(', ')}`);
                             return;
                         }
                         
-                        // Hierarchy columns are all other headers
                         const hierarchyCols = headers.filter(h => !requiredHeaders.includes(h));
                         
-                        if (hierarchyCols.length === 0) {
-                            alert('No hierarchy columns found. Add at least one column like region, district, etc.');
-                            return;
-                        }
-                        
-                        // Convert rows to users
                         const newUsers = rows.map(row => {
-                            // Skip empty rows
-                            if (!row.username && !row.password && !row.name) return null;
-                            
-                            // Build hierarchy object
+                            if (!row.username) return null;
                             const hierarchy = {};
                             hierarchyCols.forEach(col => {
                                 hierarchy[col] = String(row[col] || '').trim();
                             });
                             
                             return {
-                                username: String(row.username || '').trim(),
-                                password: String(row.password || '').trim(),
-                                name: String(row.name || '').trim(),
+                                username: String(row.username).trim(),
+                                password: String(row.password).trim(),
+                                name: String(row.name).trim(),
                                 hierarchy: hierarchy,
                                 lastLogin: null
                             };
-                        }).filter(u => u && u.username && u.password && u.name);
+                        }).filter(u => u);
                         
-                        if (newUsers.length === 0) {
-                            alert('No valid users found. Make sure each row has username, password, and name.');
-                            return;
-                        }
-                        
-                        // Update user data
                         userData.users = newUsers;
                         userData.hierarchyColumns = hierarchyCols;
                         saveData();
                         
-                        alert(`✅ Successfully loaded ${newUsers.length} users!`);
+                        alert(`✅ Loaded ${newUsers.length} users!`);
                         
-                        // Refresh properties panel if field is selected
                         if (fieldId && typeof renderProperties === 'function') {
                             renderProperties();
                         }
                         
                     } catch (err) {
                         console.error(err);
-                        alert('Error reading Excel file: ' + err.message);
+                        alert('Error: ' + err.message);
                     }
-                    
-                    // Reset input
                     input.value = '';
                 };
                 reader.readAsArrayBuffer(file);
             };
         
             // ==================== FIELD PROPERTIES ====================
-            // This shows in the right panel when field is selected - matching cascade dropdown style
             window.renderCascadingUserProperties = function(field) {
                 const container = document.getElementById('propertiesContent');
                 if (!container) return;
                 
-                // Find the cross-validation section and insert before it
-                const crossSection = container.querySelector('.prop-section:last-child');
+                // Find the Show/Hide Logic section and insert after it
+                const logicSection = Array.from(container.children).find(el => 
+                    el.innerHTML && el.innerHTML.includes('Show/Hide Logic')
+                );
                 
                 const html = `
                     <div class="prop-section">
@@ -7530,30 +7471,21 @@
                             Cascading User Login
                         </div>
                         
-                        <div style="background:#f8f9fa; padding:10px; border-radius:6px; margin-bottom:12px; border:1px dashed #dee2e6;">
-                            <div style="font-size:10px;font-weight:700;color:#004080;margin-bottom:6px;">
-                                <span data-icon="info" data-size="10"></span> User Management:
+                        <div style="background:#f8f9fa; padding:12px; border-radius:6px; margin-bottom:15px;">
+                            <div style="font-size:11px; margin-bottom:8px;">
+                                <strong>Status:</strong> ${userData.users.length} users loaded
                             </div>
-                            <p style="font-size:9px;color:#666;margin-bottom:8px;">
-                                Download template, add users with their hierarchy, then upload.
-                            </p>
-                            
-                            <div style="background:#e8f4fc; padding:8px; border-radius:4px; margin-bottom:10px;">
-                                <div style="font-size:11px;">
-                                    <strong>Status:</strong> ${userData.users.length} users loaded
-                                </div>
-                                <div style="font-size:10px; color:#666;">
-                                    Hierarchy: ${userData.hierarchyColumns.join(' → ')}
-                                </div>
+                            <div style="font-size:10px; color:#666; margin-bottom:10px;">
+                                Hierarchy: ${userData.hierarchyColumns.join(' → ')}
                             </div>
                             
-                            <button class="logic-add-btn" style="background:#6c757d; width:100%; margin-bottom:8px;" onclick="downloadUserTemplate()">
-                                <span data-icon="download" data-size="10"></span> Download Sample Template
+                            <button class="logic-add-btn" onclick="downloadUserTemplate()" style="background:#17a2b8; width:100%; margin-bottom:8px;">
+                                <span data-icon="download" data-size="10"></span> Download Template
                             </button>
                             
-                            <div style="margin-bottom:8px;">
+                            <div>
                                 <input type="file" id="userUpload_${field.id}" accept=".xlsx,.xls" style="display:none;" onchange="uploadUserExcel(this, '${field.id}')">
-                                <button class="logic-add-btn" style="background:#17a2b8; width:100%;" onclick="document.getElementById('userUpload_${field.id}').click()">
+                                <button class="logic-add-btn" onclick="document.getElementById('userUpload_${field.id}').click()" style="background:#28a745; width:100%;">
                                     <span data-icon="upload" data-size="10"></span> Upload Users Excel
                                 </button>
                             </div>
@@ -7569,32 +7501,29 @@
                             <label class="property-checkbox">
                                 <input type="checkbox" ${field.showHierarchy !== false ? 'checked' : ''} 
                                        onchange="updateField('showHierarchy', this.checked)">
-                                <span>Show user's hierarchy after login</span>
+                                <span>Show hierarchy after login</span>
                             </label>
                         </div>
                     </div>
                 `;
                 
-                // Insert before cross-validation section if it exists
-                if (crossSection) {
-                    crossSection.insertAdjacentHTML('beforebegin', html);
+                // Insert after Show/Hide Logic section
+                if (logicSection) {
+                    logicSection.insertAdjacentHTML('afterend', html);
                 } else {
                     container.insertAdjacentHTML('beforeend', html);
                 }
                 
-                if (typeof initIcons === 'function') {
-                    initIcons();
-                }
+                if (typeof initIcons === 'function') initIcons();
             };
         
             // ==================== RENDER IN FORM ====================
             window.renderCascadingUserField = function(field) {
-                // If user is already logged in
                 if (userData.currentUser) {
                     const user = userData.currentUser;
                     
                     const hierarchyHtml = userData.hierarchyColumns.map(col => 
-                        `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed #dee2e6;">
+                        `<div style="display:flex; justify-content:space-between; padding:4px 0;">
                             <strong>${col}:</strong> <span>${user.hierarchy[col] || ''}</span>
                         </div>`
                     ).join('');
@@ -7604,53 +7533,48 @@
                             <label class="viewer-field-label">${field.label}</label>
                             <div style="background:#e8f4fc; border:2px solid #004080; border-radius:8px; padding:15px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                    <span style="font-weight:700; color:#004080;">✓ Logged in as ${user.name}</span>
+                                    <span style="font-weight:700;">✓ Logged in as ${user.name}</span>
                                     <button type="button" onclick="logoutCascadingUser()" 
-                                            style="padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">
+                                            style="padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer;">
                                         Logout
                                     </button>
                                 </div>
                                 
                                 ${field.showHierarchy !== false ? `
-                                    <div style="background:white; border-radius:6px; padding:10px; margin-top:10px;">
-                                        <div style="font-size:11px; font-weight:700; margin-bottom:5px;">Your Location:</div>
+                                    <div style="background:white; border-radius:6px; padding:10px;">
                                         ${hierarchyHtml}
                                     </div>
                                 ` : ''}
                                 
                                 <input type="hidden" name="${field.name}" value="${user.username}">
-                                <input type="hidden" name="${field.name}_hierarchy" value='${JSON.stringify(user.hierarchy)}'>
                             </div>
                         </div>
                     `;
                 }
                 
-                // Show login form
                 const userOptions = userData.users.length > 0 ? 
                     userData.users.map(u => {
                         const lastLevel = userData.hierarchyColumns[userData.hierarchyColumns.length - 1];
                         return `<option value="${u.username}">${u.name} (${u.hierarchy[lastLevel] || ''})</option>`;
                     }).join('') 
-                    : '<option value="">-- No users loaded --</option>';
+                    : '<option value="">No users loaded</option>';
                 
                 return `
                     <div class="viewer-field" data-field-name="${field.name}">
                         <label class="viewer-field-label">${field.label}</label>
                         <div style="background:#f8f9fa; border:2px solid #dee2e6; border-radius:8px; padding:15px;">
                             
-                            <div style="margin-bottom:10px;">
-                                <select id="userSelect_${field.id}" style="width:100%; padding:12px; border:2px solid #ddd; border-radius:6px; margin-bottom:10px; font-family:'Oswald';">
-                                    <option value="">-- Select User --</option>
-                                    ${userOptions}
-                                </select>
-                                
-                                <input type="password" id="userPass_${field.id}" placeholder="Enter Password" 
-                                       style="width:100%; padding:12px; border:2px solid #ddd; border-radius:6px; font-family:'Oswald';">
-                            </div>
+                            <select id="userSelect_${field.id}" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:6px; margin-bottom:10px;">
+                                <option value="">-- Select User --</option>
+                                ${userOptions}
+                            </select>
+                            
+                            <input type="password" id="userPass_${field.id}" placeholder="Password" 
+                                   style="width:100%; padding:10px; border:2px solid #ddd; border-radius:6px; margin-bottom:10px;">
                             
                             <button type="button" onclick="loginCascadingUser('${field.id}')" 
-                                    style="width:100%; padding:12px; background:#004080; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">
-                                ${field.loginText || 'Login to Continue'}
+                                    style="width:100%; padding:12px; background:#004080; color:white; border:none; border-radius:6px; cursor:pointer;">
+                                ${field.loginText || 'Login'}
                             </button>
                             
                             <div id="loginMsg_${field.id}" style="margin-top:10px; font-size:11px; color:#dc3545; display:none;"></div>
@@ -7666,17 +7590,12 @@
                 const pass = document.getElementById(`userPass_${fieldId}`);
                 const msg = document.getElementById(`loginMsg_${fieldId}`);
                 
-                if (!select || !pass) {
-                    console.error('Login elements not found');
-                    return;
-                }
-                
                 const username = select.value;
                 const password = pass.value;
                 
                 if (!username || !password) {
                     msg.style.display = 'block';
-                    msg.textContent = 'Please select user and enter password';
+                    msg.textContent = 'Select user and enter password';
                     return;
                 }
                 
@@ -7688,17 +7607,13 @@
                     return;
                 }
                 
-                user.lastLogin = new Date().toISOString();
                 userData.currentUser = user;
                 saveData();
                 
                 msg.style.display = 'none';
                 
-                // Refresh the form
                 if (typeof renderFormViewer === 'function') {
                     renderFormViewer();
-                } else {
-                    location.reload();
                 }
             };
         
@@ -7706,26 +7621,16 @@
                 userData.currentUser = null;
                 if (typeof renderFormViewer === 'function') {
                     renderFormViewer();
-                } else {
-                    location.reload();
                 }
             };
         
             console.log('✅ Cascading User Login Field Ready!');
-            console.log('📥 Download template, add users, upload Excel');
         }
         
         // Initialize
         setTimeout(() => {
             if (typeof state !== 'undefined') {
                 initCascadingUserField();
-            } else {
-                const checkState = setInterval(() => {
-                    if (typeof state !== 'undefined') {
-                        clearInterval(checkState);
-                        initCascadingUserField();
-                    }
-                }, 100);
             }
         }, 500);
        
